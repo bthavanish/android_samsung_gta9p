@@ -1,0 +1,12 @@
+[
+    {
+        "repository": "android_device_samsung_sm6375-common",
+        "target_path": "device/samsung/sm6375-common",
+        "branch": "sixteen-qpr2"
+    },
+    {
+        "repository": "android_vendor_samsung_gta9p",
+        "target_path": "vendor/samsung/gta9p",
+        "branch": "sixteen-qpr2"
+    }
+]
