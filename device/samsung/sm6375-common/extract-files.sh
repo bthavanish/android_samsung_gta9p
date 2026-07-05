@@ -2,6 +2,7 @@
 #
 # Copyright (C) 2016 The CyanogenMod Project
 # Copyright (C) 2017-2023 The LineageOS Project
+# Copyright (C) 2024 The PixelOS Project
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -14,9 +15,15 @@ if [[ ! -d "${MY_DIR}" ]]; then MY_DIR="${PWD}"; fi
 
 ANDROID_ROOT="${MY_DIR}/../../.."
 
-HELPER="${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh"
-if [ ! -f "${HELPER}" ]; then
-    echo "Unable to find helper script at ${HELPER}"
+# Check for extract-utils in this repo first, then fall back to Android root
+if [ -f "${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh" ]; then
+    HELPER="${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh"
+elif [ -f "${MY_DIR}/../../../tools/extract-utils/extract_utils.sh" ]; then
+    HELPER="${MY_DIR}/../../../tools/extract-utils/extract_utils.sh"
+else
+    echo "Unable to find extract_utils.sh"
+    echo "Please clone extract-utils first:"
+    echo "  git clone https://github.com/LineageOS/android_tools_extract-utils.git tools/extract-utils"
     exit 1
 fi
 source "${HELPER}"

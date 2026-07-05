@@ -1,4 +1,36 @@
-stock_cmdline.txt
+# Build outputs
+out/
+*.o
+*.ko
+*.order
+modules.builtin
+
+# Firmware dump
 firmware-dump/
+
+# Python
 *.pyc
 __pycache__/
+
+# Temp files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+
+# Extracted tools (cloned at build time)
+tools/extract-utils/
+prebuilts/extract-tools/
+
+# Stock firmware
+stock_cmdline.txt
+*.zip

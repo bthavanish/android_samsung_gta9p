@@ -1,7 +1,8 @@
 # PixelOS for Samsung Galaxy Tab A9+ 5G (SM-X216B)
 
-Device tree for building PixelOS (Android 16 QPR2) for the Samsung Galaxy
-Tab A9+ 5G, codename `gta9p`.
+Self-contained device tree for building PixelOS (Android 16 QPR2) for the
+Samsung Galaxy Tab A9+ 5G. This repo contains everything needed to build
+except the PixelOS/AOSP framework source.
 
 ## Device Specifications
 
@@ -19,6 +20,23 @@ Tab A9+ 5G, codename `gta9p`.
 | Android | 15 (stock firmware X216BXXS9DYJ7) |
 | Security Patch | 2025-10-01 |
 
+## Repository Structure
+
+```
+android_samsung_gta9p/
+├── device/samsung/gta9p/          # Device-specific configs
+├── device/samsung/sm6375-common/  # Platform common configs
+├── vendor/samsung/gta9p/          # Device vendor blobs
+│   └── proprietary/vendor/        # Extracted blobs go here
+├── vendor/samsung/sm6375-common/  # Platform vendor blobs
+│   └── proprietary/vendor/        # Extracted blobs go here
+├── kernel/samsung/sm6375/         # Kernel source (placeholder)
+├── prebuilts/                     # Prebuilt tools (cloned at build)
+├── tools/                         # Extract utils (cloned at build)
+├── recovery/                      # Recovery sources
+└── .github/workflows/             # CI/CD for blob extraction
+```
+
 ## Building
 
 ### Prerequisites
@@ -28,29 +46,40 @@ Tab A9+ 5G, codename `gta9p`.
 - 200 GB+ free disk space
 - Android SDK and build tools
 
-### Setup
+### Quick Start
 
 ```bash
 # Initialize PixelOS source
 repo init -u https://github.com/PixelOS-AOSP/android -b sixteen-qpr2
 repo sync -c -j$(nproc --all)
 
-# Clone device tree
+# Clone this device tree (contains everything)
 git clone https://github.com/bthavanish/android_samsung_gta9p.git \
   device/samsung/gta9p
-git clone https://github.com/bthavanish/android_samsung_sm6375-common.git \
-  device/samsung/sm6375-common
 
-# Clone vendor tree (after extracting blobs)
-git clone https://github.com/bthavanish/vendor_samsung_gta9p.git \
-  vendor/samsung/gta9p
+# Extract vendor blobs (from firmware dump or device)
+cd device/samsung/gta9p
+./extract-files.sh /path/to/firmware-dump
+
+# Or use GitHub Actions (recommended)
+# Go to Actions > Extract Vendor Blobs > Run workflow
+
+# Build
+source build/envsetup.sh
+lunch pixelos_gta9p-userdebug
+mka bacon
 ```
 
 ### Extracting Vendor Blobs
 
-You need the proprietary vendor blobs from the stock firmware.
+#### Option A: GitHub Actions (Recommended)
 
-#### Option A: From firmware zip (local)
+1. Create a firmware dump repository with extracted partition images
+2. Go to Actions > Extract Vendor Blobs > Run workflow
+3. Provide your firmware dump repo URL
+4. The workflow will extract blobs and commit to this repo
+
+#### Option B: Local Extraction from Firmware
 
 ```bash
 # Extract partition images from Samsung firmware zip
@@ -61,13 +90,9 @@ cd device/samsung/sm6375-common
 ./extract-files.sh ../../firmware-dump/
 cd ../gta9p
 ./extract-files.sh ../../firmware-dump/
-
-# Generate vendor makefiles
-cd device/samsung/sm6375-common && ./setup-makefiles.sh
-cd device/samsung/gta9p && ./setup-makefiles.sh
 ```
 
-#### Option B: Via ADB (device required)
+#### Option C: ADB Extraction (Device Required)
 
 ```bash
 # Enable USB debugging on the device
@@ -78,22 +103,15 @@ cd ../gta9p
 ./extract-files.sh
 ```
 
-#### Option C: GitHub Actions
+## Kernel
 
-1. Create a firmware dump repository with extracted partition images
-2. Go to Actions > Extract Vendor Blobs > Run workflow
-3. Provide your firmware dump repo URL
-4. The workflow will extract blobs and create the vendor tree
+The prebuilt kernel images are in `device/samsung/gta9p/prebuilt/`:
+- `Image` — Kernel image (PE/COFF format)
+- `dtb.img` — Device tree blob
+- `dtbo.img` — Device tree overlay
+- `ramdisk.cpio` — Initial ramdisk
 
-### Build
-
-```bash
-source build/envsetup.sh
-lunch pixelos_gta9p-userdebug
-mka bacon
-```
-
-The build output will be in `out/target/product/gta9p/`.
+To build from source, place the Samsung kernel source in `kernel/samsung/sm6375/`.
 
 ## Flashing
 
@@ -110,7 +128,7 @@ fastboot flash dtbo out/target/product/gta9p/dtbo.img
 fastboot flash vbmeta out/target/product/gta9p/vbmeta.img \
   --disable-verity --disable-verification
 
-# Flash system partitions (if using system-as-root)
+# Flash system partitions
 fastboot flash system out/target/product/gta9p/system.img
 fastboot flash vendor out/target/product/gta9p/vendor.img
 fastboot flash product out/target/product/gta9p/product.img
@@ -150,7 +168,7 @@ fastboot reboot
 ## Credits
 
 - [PixelOS Project](https://github.com/PixelOS-AOSP)
-- [LineageOS](https://wiki.lineageos.org/) for reference device trees
+- [LineageOS](https://wiki.lineageos.org/) for reference device trees and extract-utils
 - [Samsung](https://www.samsung.com/) for the firmware
 
 ## License

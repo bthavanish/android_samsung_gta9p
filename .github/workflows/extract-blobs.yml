@@ -4,21 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       firmware_dump_repo:
-        description: 'Firmware dump repository (e.g. user/device_firmware_dump)'
-        required: true
+        description: 'Firmware dump repo (user/repo) or leave empty for ADB extraction'
+        required: false
       firmware_dump_branch:
-        description: 'Firmware dump branch (e.g. main)'
-        required: true
+        description: 'Firmware dump branch'
+        required: false
         default: 'main'
-      target_branch:
-        description: 'Branch to push vendor blobs to'
-        required: true
-        default: 'main'
+      commit_message:
+        description: 'Commit message for extracted blobs'
+        required: false
+        default: 'gta9p: proprietary: update vendor blobs from firmware'
 
 env:
   DEVICE: gta9p
   VENDOR: samsung
-  VENDOR_DEVICE: vendor_samsung_gta9p
+  DEVICE_COMMON: sm6375-common
 
 jobs:
   extract:
@@ -28,10 +28,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout device tree
+      - name: Checkout this repo
         uses: actions/checkout@v4
         with:
-          path: device/${{ env.VENDOR }}/${{ env.DEVICE }}
+          path: self
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -50,103 +50,77 @@ jobs:
             libncurses5 \
             simg2img \
             libzstd-dev \
-            zstd
-
-      - name: Clone firmware dump
-        run: |
-          git clone --depth=1 \
-            "https://github.com/${{ github.event.inputs.firmware_dump_repo }}.git" \
-            -b "${{ github.event.inputs.firmware_dump_branch }}" \
-            firmware-dump
+            zstd \
+            patchelf
 
       - name: Clone LineageOS extract-utils
         run: |
           git clone --depth=1 \
             https://github.com/LineageOS/android_tools_extract-utils.git \
             -b lineage-21.0 \
-            tools/extract-utils
+            self/tools/extract-utils
           git clone --depth=1 \
             https://github.com/LineageOS/android_prebuilts_extract-tools.git \
             -b lineage-21.0 \
-            prebuilts/extract-tools
+            self/prebuilts/extract-tools
 
-      - name: Setup extract-utils workspace
+      - name: Clone firmware dump (if provided)
+        if: ${{ github.event.inputs.firmware_dump_repo != '' }}
         run: |
-          cd device/${{ env.VENDOR }}/${{ env.DEVICE }}
-          # Create the setup workspace that extract-files.sh expects
-          mkdir -p../../../../../vendor/${{ env.VENDOR }}/${{ env.DEVICE }}
-          mkdir -p../../../../../tools/extract-utils
-          mkdir -p../../../../../prebuilts/extract-tools
-          cp -r ${{ github.workspace }}/tools/extract-utils/* ../../../../../tools/extract-utils/
-          cp -r ${{ github.workspace }}/prebuilts/extract-tools/* ../../../../../prebuilts/extract-tools/
+          git clone --depth=1 \
+            "https://github.com/${{ github.event.inputs.firmware_dump_repo }}.git" \
+            -b "${{ github.event.inputs.firmware_dump_branch }}" \
+            firmware-dump
 
-      - name: Prepare extraction
+      - name: Prepare firmware dump
+        if: ${{ github.event.inputs.firmware_dump_repo != '' }}
         run: |
-          cd device/${{ env.VENDOR }}/${{ env.DEVICE }}
-          chmod +x extract-files.sh setup-makefiles.sh
+          cd firmware-dump
 
           # Check if firmware dump has raw partition images
-          if [ -f "${{ github.workspace }}/firmware-dump/vendor.img" ]; then
-            echo "Found raw partition images in firmware dump"
-            echo "DUMP_DIR=${{ github.workspace }}/firmware-dump" >> $GITHUB_ENV
-          elif [ -f "${{ github.workspace }}/firmware-dump/super.img" ]; then
+          if [ -f "vendor.img" ]; then
+            echo "Found raw vendor partition image"
+            echo "DUMP_DIR=$(pwd)" >> $GITHUB_ENV
+          elif [ -f "super.img" ]; then
             echo "Found super.img, extracting partitions..."
-            mkdir -p ${{ github.workspace }}/firmware-dump/extracted
+            mkdir -p extracted
 
             # Convert sparse to raw if needed
-            if file "${{ github.workspace }}/firmware-dump/super.img" | grep -q "Android sparse image"; then
-              img2simg "${{ github.workspace }}/firmware-dump/super.img" \
-                "${{ github.workspace }}/firmware-dump/super.raw.img"
-              SIMG="${{ github.workspace }}/firmware-dump/super.raw.img"
+            if file "super.img" | grep -q "Android sparse image"; then
+              img2simg super.img super.raw.img
+              SIMG="super.raw.img"
             else
-              SIMG="${{ github.workspace }}/firmware-dump/super.img"
+              SIMG="super.img"
             fi
 
-            # Try to extract using lpunpack or simg2img
+            # Try to extract using lpunpack
             if command -v lpunpack &> /dev/null; then
-              lpunpack "$SIMG" "${{ github.workspace }}/firmware-dump/extracted/"
+              lpunpack "$SIMG" extracted/
             fi
 
-            echo "DUMP_DIR=${{ github.workspace }}/firmware-dump/extracted" >> $GITHUB_ENV
-          elif [ -d "${{ github.workspace }}/firmware-dump/vendor" ]; then
+            echo "DUMP_DIR=$(pwd)/extracted" >> $GITHUB_ENV
+          elif [ -d "vendor" ]; then
             echo "Found extracted vendor directory"
-            echo "DUMP_DIR=${{ github.workspace }}/firmware-dump" >> $GITHUB_ENV
+            echo "DUMP_DIR=$(pwd)" >> $GITHUB_ENV
           else
             echo "ERROR: No recognized firmware dump format found"
-            echo "Expected: vendor.img, super.img, or vendor/ directory"
-            ls -la ${{ github.workspace }}/firmware-dump/
+            ls -la
             exit 1
           fi
 
-      - name: Extract blobs via ADB (if device available)
-        if: ${{ success() }}
+      - name: Extract blobs from firmware dump (common)
+        if: ${{ github.event.inputs.firmware_dump_repo != '' }}
         run: |
-          cd device/${{ env.VENDOR }}/${{ env.DEVICE }}
-          # This will attempt ADB extraction if a device is connected
-          # Falls back to firmware dump if no device
-          timeout 30 adb devices || true
-          if adb get-state 2>/dev/null | grep -q "device"; then
-            echo "Device connected, extracting via ADB..."
-            ./extract-files.sh --no-repo-sync
-          else
-            echo "No device connected, skipping ADB extraction"
-          fi
-
-      - name: Extract blobs from dump
-        if: ${{ always() }}
-        run: |
-          cd device/${{ env.VENDOR }}/${{ env.DEVICE }}
-          # Run extraction from firmware dump
+          cd self
           if [ -d "$DUMP_DIR" ]; then
-            echo "Extracting from firmware dump: $DUMP_DIR"
-            # Use a simplified extraction that copies from dump
+            echo "Extracting common blobs from: $DUMP_DIR"
             while IFS= read -r line; do
               # Skip comments and empty lines
               [[ "$line" =~ ^#.*$ ]] && continue
               [[ -z "$line" ]] && continue
 
               src="$line"
-              dest="${{ github.workspace }}/vendor/${{ env.VENDOR }}/${{ env.DEVICE }}/proprietary/$line"
+              dest="vendor/${{ env.VENDOR }}/${{ env.DEVICE_COMMON }}/proprietary/$line"
 
               # Try to find the file in the dump
               if [ -f "$DUMP_DIR/$src" ]; then
@@ -156,33 +130,68 @@ jobs:
               else
                 echo "  MISSING: $src"
               fi
-            done < proprietary-files.txt
+            done < device/samsung/${{ env.DEVICE_COMMON }}/proprietary-files.txt
           fi
 
-      - name: Generate vendor makefiles
+      - name: Extract blobs from firmware dump (device)
+        if: ${{ github.event.inputs.firmware_dump_repo != '' }}
         run: |
-          cd device/${{ env.VENDOR }}/${{ env.DEVICE }}
-          chmod +x setup-makefiles.sh
-          ./setup-makefiles.sh
+          cd self
+          if [ -d "$DUMP_DIR" ]; then
+            echo "Extracting device blobs from: $DUMP_DIR"
+            while IFS= read -r line; do
+              # Skip comments and empty lines
+              [[ "$line" =~ ^#.*$ ]] && continue
+              [[ -z "$line" ]] && continue
 
-      - name: Push vendor tree
+              src="$line"
+              dest="vendor/${{ env.VENDOR }}/${{ env.DEVICE }}/proprietary/$line"
+
+              # Try to find the file in the dump
+              if [ -f "$DUMP_DIR/$src" ]; then
+                mkdir -p "$(dirname "$dest")"
+                cp "$DUMP_DIR/$src" "$dest"
+                echo "  OK: $src"
+              else
+                echo "  MISSING: $src"
+              fi
+            done < device/samsung/${{ env.DEVICE }}/proprietary-files.txt
+          fi
+
+      - name: Extract blobs via ADB (if device available)
+        if: ${{ github.event.inputs.firmware_dump_repo == '' }}
         run: |
-          VENDOR_REPO="https://github.com/${{ github.repository_owner }}/${{ env.VENDOR_DEVICE }}.git"
+          cd self
+          echo "Attempting ADB extraction..."
+          timeout 30 adb devices || true
+          if adb get-state 2>/dev/null | grep -q "device"; then
+            echo "Device connected, extracting via ADB..."
+            export DEVICE=${{ env.DEVICE_COMMON }}
+            export VENDOR=${{ env.VENDOR }}
+            ./device/samsung/${{ env.DEVICE_COMMON }}/extract-files.sh adb
+          else
+            echo "No device connected and no firmware dump provided"
+            echo "Please provide a firmware dump repo or connect a device"
+            exit 1
+          fi
 
-          cd vendor/${{ env.VENDOR }}/${{ env.DEVICE }}
-          git init
-          git branch -M ${{ github.event.inputs.target_branch }}
-          git add .
-          git commit -s -m "${{ env.DEVICE }}: proprietary: initial vendor tree
+      - name: Verify extraction
+        run: |
+          cd self
+          echo "=== Common vendor blobs ==="
+          find vendor/${{ env.VENDOR }}/${{ env.DEVICE_COMMON }}/proprietary -type f 2>/dev/null | wc -l
+          echo "=== Device vendor blobs ==="
+          find vendor/${{ env.VENDOR }}/${{ env.DEVICE }}/proprietary -type f 2>/dev/null | wc -l
 
-          Extracted from firmware dump: ${{ github.event.inputs.firmware_dump_repo }}"
-          git remote add origin "$VENDOR_REPO"
-          git push origin HEAD:${{ github.event.inputs.target_branch }} --force || {
-            echo "Creating vendor repository..."
-            gh repo create "${{ env.VENDOR_DEVICE }}" \
-              --public \
-              --description "Vendor tree for ${{ env.DEVICE }}" \
-              --source=. \
-              --remote=origin \
-              --push
-          }
+      - name: Commit and push
+        run: |
+          cd self
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -s -m "${{ github.event.inputs.commit_message || 'gta9p: proprietary: update vendor blobs' }}"
+            git push
+          fi

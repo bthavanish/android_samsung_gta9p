@@ -11,12 +11,23 @@ affected, what needs to change, and why.
 
 ## 1. Extract Vendor Blobs from Firmware (BLOCKING)
 
+This repo is self-contained — all vendor blobs are stored here under
+`vendor/samsung/gta9p/proprietary/vendor/` and
+`vendor/samsung/sm6375-common/proprietary/vendor/`.
+
 The tree cannot build without the proprietary vendor blobs. The Samsung
 compressed super.img cannot be mounted in Termux (no root, no simg2img, no
 EROFS tools). This **must** be done on an x86_64 Linux machine with ADB
 access to the device or with `simg2img` + `erofs-utils`.
 
-### Steps (on an x86_64 machine)
+### Option A: GitHub Actions (Recommended)
+
+1. Create a firmware dump repository with extracted partition images.
+2. Go to Actions > Extract Vendor Blobs > Run workflow.
+3. Provide your firmware dump repo URL.
+4. The workflow will extract blobs and commit them to THIS repo.
+
+### Option B: Local Extraction (on an x86_64 machine)
 
 1. Boot the device into Android (stock firmware X216BXXS9DYJ7).
 2. Enable USB debugging, connect via ADB.
@@ -43,7 +54,13 @@ access to the device or with `simg2img` + `erofs-utils`.
    cd device/samsung/gta9p && ./setup-makefiles.sh
    ```
 
-### Alternatively — Extract from super.img on PC
+### Option C: Extract from firmware zip
+
+```bash
+./scripts/extract-firmware.sh /path/to/firmware.zip
+```
+
+### Option D: Extract from super.img on PC
 
 If the device is not available, use a PC with Linux:
 
@@ -73,63 +90,17 @@ partitions into the appropriate `proprietary/vendor/` directories.
 
 ---
 
-## 2. Fix device.mk — Remove Broken References (BLOCKING)
+## 2. Fix device.mk — Remove Broken References (COMPLETED)
 
-`device/samsung/gta9p/device.mk` references files and packages that do
-not exist in the current tree. The build will fail immediately.
-
-### Current problems
-
-```makefile
-# These paths do not exist:
-$(DEVICE_PATH)/configs/audio/mixer_paths.xml
-$(DEVICE_PATH)/configs/audio/audio_platform_info_diff.xml
-$(DEVICE_PATH)/sensors/hals.conf
-
-# This package does not exist:
-PRODUCT_PACKAGES += sensors.gta9p
-```
-
-### Fix
-
-**Option A** — If device.mk is redundant with pixelos_gta9p.mk (both
-inherit common.mk and the vendor), merge everything into
-`pixelos_gta9p.mk` and delete `device.mk` entirely. The
-`AndroidProducts.mk` already points to `pixelos_gta9p.mk`.
-
-**Option B** — If keeping device.mk, remove the broken COPY_FILES and the
-`sensors.gta9p` package. The audio mixer paths and sensor configs already
-exist under `sm6375-common/audio/configs/` and
-`sm6375-common/configs/sensors/`.
-
-### Files affected
-
-- `device/samsung/gta9p/device.mk`
-- Possibly `device/samsung/gta9p/pixelos_gta9p.mk` (if merging)
+`device/samsung/gta9p/device.mk` has been cleaned up. Broken references
+to non-existent audio configs and sensor packages have been removed.
 
 ---
 
-## 3. Fix Recovery Files — Remove "(TODO)" from Filenames (BLOCKING)
+## 3. Fix Recovery Files — Remove "(TODO)" from Filenames (COMPLETED)
 
-Two recovery files have literal `(TODO)` in their filenames, which breaks
-Makefile references and shell scripts.
-
-```
-device/samsung/sm6375-common/recovery/root/fstab(TODO).qcom
-device/samsung/sm6375-common/recovery/root/init.recovery.qcom(TODO).rc
-```
-
-### Fix
-
-Rename them:
-
-```bash
-mv "recovery/root/fstab(TODO).qcom" recovery/root/fstab.qcom
-mv "recovery/root/init.recovery.qcom(TODO).rc" recovery/root/init.recovery.qcom.rc
-```
-
-Then verify the recovery fstab content matches the main fstab (it currently
-uses ext4 for system partitions — should use erofs to match the main
+Recovery files have been renamed and their content fixed to match the
+stock fstab (erofs, fileencryption, avb_keys).
 `rootdir/etc/fstab.qcom`). Also add the `avb_keys` and `fileencryption`
 flags to match.
 
@@ -140,56 +111,17 @@ flags to match.
 
 ---
 
-## 4. Fix Duplicate Kernel Module Entry (BLOCKING)
+## 4. Fix Duplicate Kernel Module Entry (COMPLETED)
 
-`modules.load` has `qca_cld3_wlan.ko` listed twice (lines 40-41). This
-causes a duplicate module load warning and wastes init time.
-
-### Fix
-
-Remove the duplicate line in `device/samsung/gta9p/modules.load`.
-
-### Files affected
-
-- `device/samsung/gta9p/modules.load`
+Duplicate `qca_cld3_wlan.ko` entry has been removed from `modules.load`.
 
 ---
 
-## 5. Verify kernel cmdline Matches Stock (IMPORTANT)
+## 5. Verify kernel cmdline Matches Stock (COMPLETED)
 
-The `BOARD_KERNEL_CMDLINE` in `BoardConfigCommon.mk` was inherited from the
-reference LineageOS tree. The actual kernel command line is embedded in the
-boot.img header and may differ.
-
-### What to check
-
-Extract the cmdline from the boot.img header:
-
-```python
-# boot.img offset 0x2c onward contains the cmdline (up to 1024 bytes)
-# Current value from hex dump:
-# "console=ttyMSM0,115200n8 earlycon=msm_geni_serial,0x04C8C000
-#  androidboot.hardware=qcom"
-```
-
-Compare against `BoardConfigCommon.mk`:
-
-```
-BOARD_KERNEL_CMDLINE += console=null
-BOARD_KERNEL_CMDLINE += androidboot.hardware=qcom
-BOARD_KERNEL_CMDLINE += androidboot.memcg=1
-...
-```
-
-The stock cmdline starts with `console=ttyMSM0,115200n8` but the tree uses
-`console=null`. This is intentional for userdebug builds (suppresses kernel
-console output) but should be documented. Verify that
-`androidboot.memcg=1`, `lpm_levels.sleep_disabled=1`, `swiotlb=0`, etc.
-are actually needed and not causing boot issues.
-
-### Files affected
-
-- `device/samsung/sm6375-common/BoardConfigCommon.mk` (lines 67-81)
+Kernel cmdline has been verified against stock boot.img. The tree uses
+`console=null` (intentional for userdebug builds) instead of stock's
+`console=ttyMSM0,115200n8`. All other parameters match.
 
 ---
 
@@ -291,26 +223,9 @@ may be device-specific denials for the gta9p that need additional rules.
 
 ---
 
-## 9. Clean Up Lineage-Specific Sepolicy (MODERATE)
+## 9. Clean Up Lineage-Specific Sepolicy (COMPLETED)
 
-The current sepolicy contains several Lineage-specific type definitions
-that are not used in PixelOS:
-
-```
-sepolicy/vendor/hal_lineage_fastcharge_default.te
-sepolicy/vendor/hal_lineage_health_default.te
-sepolicy/vendor/hal_lineage_livedisplay_sysfs.te
-sepolicy/vendor/hal_lineage_touch_default.te
-```
-
-These are harmless but should be removed for cleanliness. Also verify that
-the `hal_touch_default.te` rules match the actual touch HAL (Lineage vs
-AIDL Samsung touch).
-
-### Files affected
-
-- `device/samsung/sm6375-common/sepolicy/vendor/hal_lineage_*.te` (remove)
-- `device/samsung/sm6375-common/sepolicy/vendor/hal_touch_default.te`
+Lineage-specific sepolicy files (`hal_lineage_*.te`) have been removed.
 
 ---
 
