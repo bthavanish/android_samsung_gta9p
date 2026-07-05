@@ -1,0 +1,4 @@
+stock_cmdline.txt
+firmware-dump/
+*.pyc
+__pycache__/

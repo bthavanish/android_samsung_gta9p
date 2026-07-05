@@ -1,4 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Display -->
     <integer name="config_screenDensityDpi">450</integer>
+    <dimen name="config_mainBuiltInDisplayPhysicalSize">120x190mm</dimen>
+
+    <!-- Navigation bar -->
+    <bool name="config_showNavigationBar">true</bool>
+    <integer name="config_navBarInteractionMode">0</integer>
+
+    <!-- NFC -->
+    <string name="config_nfcFirmwarePath">vendor/firmware/sec_s3fwrn5p_firmware.bin</string>
+
+    <!-- Audio -->
+    <integer name="config_defaultAudioSafetyVolume">3</integer>
+    <bool name="config_audioSafeMediaVolumeEnabled">true</bool>
+
+    <!-- WiFi tethering -->
+    <string-array translatable="false" name="config_tether_wifi_regexs">
+        <item>"wlan0"</item>
+    </string-array>
+    <integer name="config_tether_wifi_regexs_max">1</integer>
+
+    <!-- Bluetooth -->
+    <bool name="config_bluetooth_default_profiles">true</bool>
+    <string name="config_bluetooth_sap_service_package">com.android.bluetooth.opp</string>
+
+    <!-- Camera -->
+    <bool name="config_enableCamera2Support">true</bool>
+
+    <!-- SMS -->
+    <integer name="config_maxConcurrentActiveDataSubscriptions">2</integer>
+    <integer name="config_maxConcurrentHandsfreeActiveCall">1</integer>
+
+    <!-- Telephony -->
+    <bool name="config_sms_capable">true</bool>
+    <bool name="config_voice_capable">true</bool>
+    <bool name="config_show4GDataIcon">true</bool>
 </resources>
