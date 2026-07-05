@@ -7,9 +7,9 @@ DEVICE_PATH := device/samsung/gta9p
 include device/samsung/sm6375-common/BoardConfigCommon.mk
 
 # Kernel prebuilt
-TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image
-BOARD_PREBUILT_DTBIMAGE_DIR := $(DEVICE_PATH)/prebuilt
-BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilt/dtbo.img
+TARGET_PREBUILT_KERNEL := kernel/samsung/sm6375/prebuilt/Image
+BOARD_PREBUILT_DTBIMAGE_DIR := kernel/samsung/sm6375/prebuilt
+BOARD_PREBUILT_DTBOIMAGE := kernel/samsung/sm6375/prebuilt/dtbo.img
 
 BOARD_NAME                  := SRPWD25B009
 
