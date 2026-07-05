@@ -57,8 +57,7 @@ TARGET_2ND_CPU_ABI2 := armeabi
 TARGET_2ND_CPU_VARIANT := generic
 TARGET_2ND_CPU_VARIANT_RUNTIME := cortex-a75
 
-# Kernel config
-TARGET_KERNEL_SOURCE        := kernel/samsung/sm6375
+# Kernel config (prebuilt kernel from device/samsung/gta9p/prebuilt/)
 TARGET_KERNEL_ARCH          := arm64
 TARGET_KERNEL_HEADER_ARCH   := arm64
 TARGET_LINUX_KERNEL_VERSION := 5.4
