@@ -60,7 +60,7 @@ TARGET_2ND_CPU_VARIANT_RUNTIME := cortex-a75
 # Kernel config (prebuilt kernel from device/samsung/gta9p/prebuilt/)
 TARGET_KERNEL_ARCH          := arm64
 TARGET_KERNEL_HEADER_ARCH   := arm64
-TARGET_LINUX_KERNEL_VERSION := 5.4
+TARGET_LINUX_KERNEL_VERSION := 5.15
 
 # Kernel flags
 BOARD_KERNEL_CMDLINE += console=null
