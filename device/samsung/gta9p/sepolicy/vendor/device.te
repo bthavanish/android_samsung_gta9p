@@ -1,0 +1,3 @@
+# Device type for gta9p
+type gta9p, domain;
+type gta9p_device, device_type;

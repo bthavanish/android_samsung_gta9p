@@ -1,0 +1,2 @@
+# gta9p device file contexts
+/vendor/bin/hw/android\.hardware\.audio@6\.0-impl\.samsung-sm6375   u:object_r:hal_audio_default_exec:s0
