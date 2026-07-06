@@ -5,5 +5,6 @@
 # Inherit from sm6375-common vendor
 $(call inherit-product, vendor/samsung/sm6375-common/sm6375-common-vendor.mk)
 
+# vendor partition blobs
 PRODUCT_COPY_FILES += \
     $(call find-copy-subdir-files,*,vendor/samsung/gta9p/proprietary/vendor,$(TARGET_COPY_OUT_VENDOR))
