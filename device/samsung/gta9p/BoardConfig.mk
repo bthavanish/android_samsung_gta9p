@@ -6,8 +6,24 @@ DEVICE_PATH := device/samsung/gta9p
 
 include device/samsung/sm6375-common/BoardConfigCommon.mk
 
-# Kernel prebuilt
+# Kernel build mode
+# Set to true to build kernel from source, false to use prebuilts
+TARGET_KERNEL_BUILD_FROM_SOURCE ?= false
+
+ifeq ($(TARGET_KERNEL_BUILD_FROM_SOURCE),true)
+# Source-built kernel
+TARGET_KERNEL_SOURCE := kernel/samsung/sm6375
+KERNEL_DEFCONFIG := gki_defconfig
+KERNEL_DEFCONFIG_FRAGMENTS := \
+    kernel/samsung/sm6375/arch/arm64/configs/vendor/holi-qgki_defconfig \
+    kernel/samsung/sm6375/arch/arm64/configs/vendor/holi_QGKI.config \
+    kernel/samsung/sm6375/arch/arm64/configs/vendor/samsung/gta9p.config
+else
+# Prebuilt kernel (default)
 TARGET_PREBUILT_KERNEL := kernel/samsung/sm6375/prebuilt/Image
+endif
+
+# DTB/DTBO (always from prebuilt for now)
 BOARD_PREBUILT_DTBIMAGE_DIR := kernel/samsung/sm6375/prebuilt
 BOARD_PREBUILT_DTBOIMAGE := kernel/samsung/sm6375/prebuilt/dtbo.img
 

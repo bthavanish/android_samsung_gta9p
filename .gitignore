@@ -5,6 +5,11 @@ out/
 *.order
 modules.builtin
 
+# Kernel build output
+kernel/samsung/sm6375/out/
+kernel/samsung/sm6375/*.dtb
+kernel/samsung/sm6375/*.tmp
+
 # Firmware dump
 firmware-dump/
 fw_work/

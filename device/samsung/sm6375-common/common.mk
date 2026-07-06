@@ -346,8 +346,6 @@ PRODUCT_PACKAGES += \
     init.qcom.usb.rc \
     init.qcom.usb.sh
 
-PRODUCT_SOONG_NAMESPACES += vendor/qcom/opensource/usb/etc
-
 # Vibrator
 PRODUCT_PACKAGES += \
     android.hardware.vibrator-service.samsung
@@ -386,9 +384,7 @@ PRODUCT_PACKAGES += \
 
 # Soong namespaces
 PRODUCT_SOONG_NAMESPACES += \
-    $(COMMON_PATH) \
-    hardware/google/interfaces \
-    hardware/google/pixel
+    $(COMMON_PATH)
 
 # Prop files
 TARGET_SYSTEM_PROP += $(COMMON_PATH)/system.prop
