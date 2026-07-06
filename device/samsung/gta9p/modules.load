@@ -1,4 +1,3 @@
-tcp_westwood.ko
 rx_macro_dlkm.ko
 machine_dlkm.ko
 q6_pdr_dlkm.ko
@@ -10,7 +9,6 @@ rdbg.ko
 btpower.ko
 usb_f_conn_gadget.ko
 swr_ctrl_dlkm.ko
-tcp_htcp.ko
 camera.ko
 fs19xx_dlkm.ko
 wcd938x_slave_dlkm.ko
