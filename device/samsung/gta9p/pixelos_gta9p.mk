@@ -5,6 +5,9 @@
 # Inherit from sm6375-common
 $(call inherit-product, device/samsung/sm6375-common/common.mk)
 
+# Inherit device-specific config
+$(call inherit-product, device/samsung/gta9p/device.mk)
+
 # Inherit PixelOS product
 $(call inherit-product, vendor/pixelos/config/common_full_phone.mk)
 
