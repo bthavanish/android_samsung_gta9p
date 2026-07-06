@@ -64,6 +64,7 @@ vendor/etc/audio_io_policy.conf
 vendor/etc/audio_platform_info.xml
 vendor/etc/audio_platform_info_intcodec.xml
 vendor/etc/audio_policy_configuration.xml
+vendor/etc/mixer_paths.xml
 # vendor/etc/mixer_usb_default.xml
 vendor/etc/sound_trigger_mixer_paths.xml
 vendor/etc/sound_trigger_platform_info.xml
