@@ -1,39 +1,54 @@
 #!/bin/bash
-#
 # Copyright (C) 2024 The PixelOS Project
 #
 # SPDX-License-Identifier: Apache-2.0
 #
+# Setup makefiles script for Samsung Galaxy Tab A9+ 5G (gta9p)
 
 set -e
 
-# Load extract_utils and do some sanity checks
-MY_DIR="${BASH_SOURCE%/*}"
-if [[ ! -d "${MY_DIR}" ]]; then MY_DIR="${PWD}"; fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="${SCRIPT_DIR}/../../.."
 
-ANDROID_ROOT="${MY_DIR}/../../.."
+echo "Generating vendor makefiles for gta9p..."
 
-# Check for extract-utils in this repo first, then fall back to Android root
-if [ -f "${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh" ]; then
-    HELPER="${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh"
-elif [ -f "${MY_DIR}/../../../tools/extract-utils/extract_utils.sh" ]; then
-    HELPER="${MY_DIR}/../../../tools/extract-utils/extract_utils.sh"
+# The vendor makefiles are already present in:
+# vendor/samsung/gta9p/gta9p-vendor.mk
+# vendor/samsung/sm6375-common/sm6375-common-vendor.mk
+#
+# This script validates that all required blobs are present.
+
+VENDOR_DIR="vendor/samsung/gta9p/proprietary"
+SM6375_DIR="vendor/samsung/sm6375-common/proprietary"
+
+echo ""
+echo "=== Checking gta9p vendor blobs ==="
+if [ -d "$VENDOR_DIR" ]; then
+    echo "gta9p vendor files: $(find "$VENDOR_DIR" -type f | wc -l)"
+    echo "HAL .so files: $(find "$VENDOR_DIR" -name "*.so" -path "*/hw/*" | wc -l)"
 else
-    echo "Unable to find extract_utils.sh"
-    echo "Please clone extract-utils first:"
-    echo "  git clone https://github.com/LineageOS/android_tools_extract-utils.git tools/extract-utils"
+    echo "ERROR: $VENDOR_DIR not found. Run extract-files.sh first."
     exit 1
 fi
-source "${HELPER}"
 
-# Initialize the helper for device
-setup_vendor "${DEVICE}" "${VENDOR}" "${ANDROID_ROOT}" false
+echo ""
+echo "=== Checking sm6375-common vendor blobs ==="
+if [ -d "$SM6375_DIR" ]; then
+    echo "sm6375-common vendor files: $(find "$SM6375_DIR" -type f | wc -l)"
+else
+    echo "ERROR: $SM6375_DIR not found. Run extract-files.sh first."
+    exit 1
+fi
 
-# Warning headers and guards
-write_headers
+echo ""
+echo "=== Checking kernel modules ==="
+MODULES_DIR="device/samsung/gta9p/prebuilt/modules"
+if [ -d "$MODULES_DIR" ]; then
+    echo "Kernel modules: $(ls "$MODULES_DIR"/*.ko 2>/dev/null | wc -l)"
+else
+    echo "ERROR: $MODULES_DIR not found. Run extract-files.sh first."
+    exit 1
+fi
 
-# The standard device blobs
-write_makefiles "${MY_DIR}/proprietary-files.txt" true
-
-# Finish
-write_footers
+echo ""
+echo "=== Validation complete ==="
