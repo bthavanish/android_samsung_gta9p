@@ -7,6 +7,7 @@ modules.builtin
 
 # Firmware dump
 firmware-dump/
+fw_work/
 
 # Python
 *.pyc
