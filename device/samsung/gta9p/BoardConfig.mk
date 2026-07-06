@@ -14,6 +14,8 @@ BOARD_PREBUILT_DTBOIMAGE := kernel/samsung/sm6375/prebuilt/dtbo.img
 BOARD_NAME                  := SRPWD25B009
 
 # Kernel modules
+BOARD_VENDOR_KERNEL_MODULES := \
+    $(wildcard $(DEVICE_PATH)/prebuilt/modules/*.ko)
 BOARD_VENDOR_KERNEL_MODULES_LOAD := $(strip $(shell cat $(DEVICE_PATH)/modules.load))
 
 # Recovery
