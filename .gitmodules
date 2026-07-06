@@ -1,0 +1,4 @@
+[submodule "hardware/samsung"]
+	path = hardware/samsung
+	url = https://github.com/LineageOS/android_hardware_samsung.git
+	branch = lineage-22.2
